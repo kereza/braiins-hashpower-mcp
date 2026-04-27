@@ -8,9 +8,10 @@ on:
 jobs:
   release:
     runs-on: ubuntu-latest
-    concurrency: release
+    concurrency:
+      group: ${{ github.workflow }}-release
+      cancel-in-progress: false
     permissions:
-      id-token: write
       contents: write
 
     steps:
@@ -23,8 +24,43 @@ jobs:
         with:
           python-version: "3.11"
 
-      - uses: python-semantic-release/python-semantic-release@v9
+      - name: Semantic Release
+        id: release
+        uses: python-semantic-release/python-semantic-release@v9
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-        env:
-          PYPI_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+
+      - name: Upload dist to GitHub Release
+        uses: python-semantic-release/publish-action@v9
+        if: steps.release.outputs.released == 'true'
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          tag: ${{ steps.release.outputs.tag }}
+
+      - uses: actions/upload-artifact@v4
+        if: steps.release.outputs.released == 'true'
+        with:
+          name: dist
+          path: dist
+
+    outputs:
+      released: ${{ steps.release.outputs.released || 'false' }}
+
+  deploy:
+    needs: release
+    if: needs.release.outputs.released == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist
+          password: ${{ secrets.PYPI_API_TOKEN }}
