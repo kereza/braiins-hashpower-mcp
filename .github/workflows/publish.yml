@@ -23,13 +23,8 @@ jobs:
         with:
           python-version: "3.11"
 
-      - run: pip install python-semantic-release
-
-      - run: semantic-release version
+      - uses: python-semantic-release/python-semantic-release@v9
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - run: semantic-release publish
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PYPI_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
