@@ -7,9 +7,13 @@ Base URL: https://hashpower.braiins.com/v1
 Auth: set BRAIINS_API_KEY env var (apikey header, Kong key-auth)
 """
 
+import logging
 import os
 import httpx
 from mcp.server.fastmcp import FastMCP
+
+logging.basicConfig(level=os.environ.get("LOG_LEVEL", "INFO").upper(), format="%(asctime)s %(levelname)s %(message)s")
+log = logging.getLogger(__name__)
 
 BASE_URL = "https://hashpower.braiins.com/v1"
 
@@ -21,33 +25,86 @@ def _headers() -> dict:
     return {"apikey": key} if key else {}
 
 
+def _require_api_key() -> None:
+    if not os.environ.get("BRAIINS_API_KEY"):
+        raise ValueError("BRAIINS_API_KEY environment variable is not set")
+
+
+def _handle_http_error(exc: httpx.HTTPStatusError) -> None:
+    status = exc.response.status_code
+    if status == 401:
+        raise ValueError("Authentication failed — check your BRAIINS_API_KEY") from exc
+    if status == 403:
+        raise ValueError("Access forbidden — your API key lacks permission for this endpoint") from exc
+    if status == 404:
+        raise ValueError(f"Resource not found: {exc.request.url}") from exc
+    if status == 429:
+        raise ValueError("Rate limit exceeded — slow down requests") from exc
+    if status >= 500:
+        raise ValueError(f"Braiins API server error ({status}) — try again later") from exc
+    raise ValueError(f"API request failed with status {status}: {exc.response.text}") from exc
+
+
 def _get(path: str, params: dict = None, auth: bool = False) -> dict:
+    if auth:
+        _require_api_key()
     headers = _headers() if auth else {}
-    with httpx.Client(timeout=15) as client:
-        resp = client.get(f"{BASE_URL}{path}", headers=headers, params=params or {})
-        resp.raise_for_status()
-        return resp.json()
+    try:
+        with httpx.Client(timeout=15) as client:
+            resp = client.get(f"{BASE_URL}{path}", headers=headers, params=params or {})
+            resp.raise_for_status()
+            return resp.json()
+    except httpx.HTTPStatusError as exc:
+        _handle_http_error(exc)
+    except httpx.TimeoutException as exc:
+        raise ValueError("Request timed out — the Braiins API did not respond in time") from exc
+    except httpx.RequestError as exc:
+        raise ValueError(f"Network error reaching Braiins API: {exc}") from exc
 
 
 def _post(path: str, body: dict = None) -> dict:
-    with httpx.Client(timeout=15) as client:
-        resp = client.post(f"{BASE_URL}{path}", headers=_headers(), json=body or {})
-        resp.raise_for_status()
-        return resp.json()
+    _require_api_key()
+    try:
+        with httpx.Client(timeout=15) as client:
+            resp = client.post(f"{BASE_URL}{path}", headers=_headers(), json=body or {})
+            resp.raise_for_status()
+            return resp.json()
+    except httpx.HTTPStatusError as exc:
+        _handle_http_error(exc)
+    except httpx.TimeoutException as exc:
+        raise ValueError("Request timed out — the Braiins API did not respond in time") from exc
+    except httpx.RequestError as exc:
+        raise ValueError(f"Network error reaching Braiins API: {exc}") from exc
 
 
 def _delete(path: str) -> dict:
-    with httpx.Client(timeout=15) as client:
-        resp = client.delete(f"{BASE_URL}{path}", headers=_headers())
-        resp.raise_for_status()
-        return resp.json()
+    _require_api_key()
+    try:
+        with httpx.Client(timeout=15) as client:
+            resp = client.delete(f"{BASE_URL}{path}", headers=_headers())
+            resp.raise_for_status()
+            return resp.json() if resp.content else {}
+    except httpx.HTTPStatusError as exc:
+        _handle_http_error(exc)
+    except httpx.TimeoutException as exc:
+        raise ValueError("Request timed out — the Braiins API did not respond in time") from exc
+    except httpx.RequestError as exc:
+        raise ValueError(f"Network error reaching Braiins API: {exc}") from exc
 
 
 def _put(path: str, body: dict = None) -> dict:
-    with httpx.Client(timeout=15) as client:
-        resp = client.put(f"{BASE_URL}{path}", headers=_headers(), json=body or {})
-        resp.raise_for_status()
-        return resp.json()
+    _require_api_key()
+    try:
+        with httpx.Client(timeout=15) as client:
+            resp = client.put(f"{BASE_URL}{path}", headers=_headers(), json=body or {})
+            resp.raise_for_status()
+            return resp.json()
+    except httpx.HTTPStatusError as exc:
+        _handle_http_error(exc)
+    except httpx.TimeoutException as exc:
+        raise ValueError("Request timed out — the Braiins API did not respond in time") from exc
+    except httpx.RequestError as exc:
+        raise ValueError(f"Network error reaching Braiins API: {exc}") from exc
 
 
 # ---------------------------------------------------------------------------
@@ -236,11 +293,11 @@ def get_bid_speed_history(
         limit: Maximum number of data points to return.
     """
     params = {}
-    if aggregation_period:
+    if aggregation_period is not None:
         params["aggregation_period"] = aggregation_period
-    if sliding_window_size:
+    if sliding_window_size is not None:
         params["sliding_window_size"] = sliding_window_size
-    if datetime_from:
+    if datetime_from is not None:
         params["datetime_from"] = datetime_from
     if limit is not None:
         params["limit"] = limit
@@ -265,9 +322,9 @@ def get_bid_delivery_history(
         limit: Maximum number of data points to return.
     """
     params = {}
-    if aggregation_period:
+    if aggregation_period is not None:
         params["aggregation_period"] = aggregation_period
-    if datetime_from:
+    if datetime_from is not None:
         params["datetime_from"] = datetime_from
     if limit is not None:
         params["limit"] = limit
@@ -278,8 +335,8 @@ def get_bid_delivery_history(
 def create_bid(
     upstream_url: str,
     speed_limit_ph: float,
-    amount_sat: float,
-    price_sat: float,
+    amount_sat: int,
+    price_sat: int,
     upstream_identity: str = None,
     cl_order_id: str = None,
     memo: str = None,
@@ -307,15 +364,18 @@ def create_bid(
         body["cl_order_id"] = cl_order_id
     if memo is not None:
         body["memo"] = memo
-    return _post("/spot/bid", body)
+    log.info("create_bid upstream=%s speed_limit_ph=%s amount_sat=%s price_sat=%s", upstream_url, speed_limit_ph, amount_sat, price_sat)
+    result = _post("/spot/bid", body)
+    log.info("create_bid result=%s", result)
+    return result
 
 
 @mcp.tool()
 def update_bid(
     bid_id: str,
     cl_order_id: str = None,
-    new_amount_sat: float = None,
-    new_price_sat: float = None,
+    new_amount_sat: int = None,
+    new_price_sat: int = None,
     new_speed_limit_ph: float = None,
     memo: str = None,
 ) -> dict:
@@ -340,7 +400,10 @@ def update_bid(
         body["new_speed_limit_ph"] = {"value": new_speed_limit_ph}
     if memo is not None:
         body["memo"] = memo
-    return _put("/spot/bid", body)
+    log.info("update_bid bid_id=%s updates=%s", bid_id, {k: v for k, v in body.items() if k != "bid_id"})
+    result = _put("/spot/bid", body)
+    log.info("update_bid result=%s", result)
+    return result
 
 
 @mcp.tool()
@@ -350,7 +413,10 @@ def cancel_bid(order_id: str) -> dict:
     Args:
         order_id: Bid order ID in format B123456789.
     """
-    return _delete(f"/spot/bid/{order_id}")
+    log.info("cancel_bid order_id=%s", order_id)
+    result = _delete(f"/spot/bid/{order_id}")
+    log.info("cancel_bid confirmed order_id=%s", order_id)
+    return result
 
 
 def main():
