@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "braiins-hashpower": {
+      "command": "python3",
+      "args": ["/absolute/path/to/braiins-hashpower-mcp/server.py"],
+      "env": {
+        "BRAIINS_API_KEY": "your_api_key_here"
+      }
+    }
+  }
+}
