@@ -12,6 +12,7 @@ jobs:
       group: ${{ github.workflow }}-release
       cancel-in-progress: false
     permissions:
+      id-token: write
       contents: write
 
     steps:
@@ -30,37 +31,8 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload dist to GitHub Release
-        uses: python-semantic-release/publish-action@v9
-        if: steps.release.outputs.tag != ''
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          tag: ${{ steps.release.outputs.tag }}
-
-      - uses: actions/upload-artifact@v4
-        if: steps.release.outputs.tag != ''
-        with:
-          name: dist
-          path: dist
-
-    outputs:
-      released: ${{ steps.release.outputs.released || 'false' }}
-      tag: ${{ steps.release.outputs.tag }}
-
-  deploy:
-    needs: release
-    if: needs.release.outputs.tag != ''
-    runs-on: ubuntu-latest
-    permissions:
-      id-token: write
-
-    steps:
-      - uses: actions/download-artifact@v4
-        with:
-          name: dist
-          path: dist
-
       - name: Publish to PyPI
+        if: steps.release.outputs.tag != ''
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           packages-dir: dist
