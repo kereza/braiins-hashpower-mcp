@@ -1,6 +1,6 @@
 [project]
 name = "braiins-hashpower-mcp"
-version = "0.5.0"
+version = "1.0.0"
 description = "MCP server for the Braiins Hashpower Spot Market API"
 readme = "README.md"
 requires-python = ">=3.9"
