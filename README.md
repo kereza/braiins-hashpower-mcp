@@ -12,11 +12,21 @@ An [MCP (Model Context Protocol)](https://modelcontextprotocol.io) server that w
 ## Prerequisites
 
 - A Braiins Hashpower API key ([get one at market.braiins.com](https://market.braiins.com))
-- [uv](https://docs.astral.sh/uv/getting-started/installation/) (recommended)
+- [uv](https://docs.astral.sh/uv/getting-started/installation/) — provides the `uvx` command used below
+
+## Installation
+
+No manual installation needed. `uvx` fetches and runs the package from PyPI automatically on first use.
+
+If you prefer pip:
+
+```bash
+pip install braiins-hashpower-mcp
+```
 
 ## Connecting to Claude Code (VS Code)
 
-Add to your `.mcp.json`:
+Add to your `.mcp.json` (using `uvx`):
 
 ```json
 {
@@ -31,6 +41,8 @@ Add to your `.mcp.json`:
   }
 }
 ```
+
+Or if using pip, replace `"command": "uvx"` and `"args": ["braiins-hashpower-mcp"]` with `"command": "braiins-hashpower-mcp"` and `"args": []`.
 
 Then reload the VS Code window (`Cmd+Shift+P` → **Developer: Reload Window**).
 
