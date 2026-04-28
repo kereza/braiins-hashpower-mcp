@@ -24,6 +24,20 @@ If you prefer pip:
 pip install braiins-hashpower-mcp
 ```
 
+## Connecting to Claude Code (CLI)
+
+```bash
+claude mcp add braiins-hashpower \
+  -e BRAIINS_API_KEY=your_api_key_here \
+  -- uvx braiins-hashpower-mcp
+```
+
+To remove it later:
+
+```bash
+claude mcp remove braiins-hashpower
+```
+
 ## Connecting to Claude Code (VS Code)
 
 Add to your `.mcp.json` (using `uvx`):
@@ -45,20 +59,6 @@ Add to your `.mcp.json` (using `uvx`):
 Or if using pip, replace `"command": "uvx"` and `"args": ["braiins-hashpower-mcp"]` with `"command": "braiins-hashpower-mcp"` and `"args": []`.
 
 Then reload the VS Code window (`Cmd+Shift+P` → **Developer: Reload Window**).
-
-## Connecting to Claude Code (CLI)
-
-```bash
-claude mcp add braiins-hashpower \
-  -e BRAIINS_API_KEY=your_api_key_here \
-  -- uvx braiins-hashpower-mcp
-```
-
-To remove it later:
-
-```bash
-claude mcp remove braiins-hashpower
-```
 
 ## Available Tools
 
