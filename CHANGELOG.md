@@ -1,6 +1,19 @@
 # CHANGELOG
 
 
+## v1.0.6 (2026-04-28)
+
+### Bug Fixes
+
+- Add 5 rlease process
+  ([`ac0930f`](https://github.com/kereza/braiins-hashpower-mcp/commit/ac0930f337d1a29bf65d54a812777dfa084b00ed))
+
+### Documentation
+
+- Update docs
+  ([`84c02d6`](https://github.com/kereza/braiins-hashpower-mcp/commit/84c02d663fd8b6adfef90a271b83d81559b922b1))
+
+
 ## v1.0.5 (2026-04-27)
 
 ### Bug Fixes
