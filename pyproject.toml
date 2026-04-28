@@ -5,8 +5,8 @@ description = "MCP server for the Braiins Hashpower Spot Market API"
 readme = "README.md"
 requires-python = ">=3.9"
 dependencies = [
-    "mcp[cli]",
-    "httpx",
+    "mcp[cli]>=1.27.0",
+    "httpx>=0.28.1",
 ]
 
 [project.scripts]
